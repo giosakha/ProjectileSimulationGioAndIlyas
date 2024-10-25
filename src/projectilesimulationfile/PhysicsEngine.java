@@ -15,15 +15,16 @@ import javafx.scene.shape.Path;
 public class PhysicsEngine {
    
     private static double gravity = 9.81;
-    public static Point calculatePosition(double time, double initVelocity , double launchAngle , double airResistance) {
+    public static Point calculatePosition(double time, double initVelocity , double launchAngle ,double initialY, double airResistance) {
        double angleRad = Math.toRadians(launchAngle);
         double x = initVelocity * time * Math.cos(angleRad);
-        double y = (initVelocity * time * Math.sin(angleRad)) - (0.5 * gravity * time * time);
+        double y = initialY + (initVelocity * time * Math.sin(angleRad)) - (0.5 * gravity * time * time);
         // testing changes
         if (airResistance != 0) {
             double airResistanceFactor = Math.exp(-airResistance * time);
+           
             x *= airResistanceFactor;  
-            y *= airResistanceFactor; 
+            y = initialY + (y - initialY) * airResistanceFactor;
         }
     return new Point(x,y , 5 , Color.RED);
     }
