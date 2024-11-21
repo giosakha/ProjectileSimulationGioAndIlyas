@@ -14,7 +14,8 @@ import javafx.stage.Stage;
  *
  * @author giorg
  */
-public class Main extends Application {
+public class ProjectileSimulationfile extends Application {
+    
     @Override
     public void start(Stage primaryStage) {
         BorderPane mainPane = new BorderPane();

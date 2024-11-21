@@ -13,11 +13,10 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.GridPane;
 import javafx.scene.paint.Color;
 
-public class ParameterMenu extends VBox {
+public class ParameterMenu extends GridPane {
     private int ballNumber;
     private Color ballColor;
 
@@ -26,27 +25,33 @@ public class ParameterMenu extends VBox {
         this.ballColor = ballColor;
 
         setPadding(new Insets(10));
-        setSpacing(5);
+        setVgap(5);
+        setHgap(10);
 
         Label title = new Label("Ball " + ballNumber + " (" + getBallColor(ballNumber) + ")");
         title.setStyle("-fx-font-weight: bold;");
+        add(title, 0, 0, 2, 1); 
 
-        TextField initialVelocityTextField = new TextField("50");
-        TextField launchAngleTextField = new TextField("45");
-        TextField launchHeightTextField = new TextField("0");
+        TextField initialVelocityTextField = new TextField("");
+        TextField launchAngleTextField = new TextField("");
+        TextField launchHeightTextField = new TextField("");
 
-        HBox initialVelocityBox = new HBox(5);
-        initialVelocityBox.getChildren().addAll(new Label("Initial Velocity:"), initialVelocityTextField, new ComboBox<String>());
-        HBox launchAngleBox = new HBox(5);
-        launchAngleBox.getChildren().addAll(new Label("Launch Angle:"), launchAngleTextField, new ComboBox<String>());
+        add(new Label("Initial Velocity:"), 0, 1);
+        add(initialVelocityTextField, 1, 1);
+        add(new ComboBox<String>(), 2, 1);
 
-        HBox launchHeightBox = new HBox(5);
-        launchHeightBox.getChildren().addAll(new Label("Launch Height:"), launchHeightTextField, new ComboBox<String>());
+        add(new Label("Launch Angle:"), 0, 2);
+        add(launchAngleTextField, 1, 2);
+        add(new ComboBox<String>(), 2, 2);
 
+        add(new Label("Launch Height:"), 0, 3);
+        add(launchHeightTextField, 1, 3);
+        add(new ComboBox<String>(), 2, 3);
+        // Play and Stop buttons
         Button playButton = new Button("Play");
         Button stopButton = new Button("Stop");
-
-        getChildren().addAll(title, initialVelocityBox, launchAngleBox, launchHeightBox, playButton, stopButton);
+        add(playButton, 0, 4);
+        add(stopButton, 1, 4);
     }
 
     private String getBallColor(int ballNumber) {
