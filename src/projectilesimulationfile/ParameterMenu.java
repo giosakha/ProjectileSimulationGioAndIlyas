@@ -13,8 +13,12 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextFormatter;
 import javafx.scene.layout.GridPane;
 import javafx.scene.paint.Color;
+
+import java.util.function.UnaryOperator;
+import javafx.scene.Node;
 
 public class ParameterMenu extends GridPane {
     private int ballNumber;
@@ -30,14 +34,14 @@ public class ParameterMenu extends GridPane {
 
         Label title = new Label("Ball " + ballNumber + " (" + getBallColor(ballNumber) + ")");
         title.setStyle("-fx-font-weight: bold;");
-        add(title, 0, 0, 2, 1); 
+        add(title, 0, 0, 2, 1);
 
-        TextField initialVelocityTextField = new TextField("");
-        TextField launchAngleTextField = new TextField("");
-        TextField launchHeightTextField = new TextField("");
-        TextField ballWeightTextField = new TextField(""); 
-        TextField airResistanceTextField = new TextField("");
-        
+        TextField initialVelocityTextField = createNumericTextField();
+        TextField launchAngleTextField = createNumericTextField();
+        TextField launchHeightTextField = createNumericTextField();
+        TextField ballWeightTextField = createNumericTextField();
+        TextField airResistanceTextField = createNumericTextField();
+
         add(new Label("Initial Velocity:"), 0, 2);
         add(initialVelocityTextField, 1, 2);
         ComboBox<String> initialVelocityUnitComboBox = new ComboBox<>();
@@ -66,17 +70,30 @@ public class ParameterMenu extends GridPane {
         ballWeightUnitComboBox.setValue("kg");
         add(ballWeightUnitComboBox, 2, 5);
 
-        add(new Label("Air Resistance (kg/m):"), 0, 6);
+        add(new Label("Air Resistance:"), 0, 6);
         add(airResistanceTextField, 1, 6);
         ComboBox<String> airResistanceUnitComboBox = new ComboBox<>();
-        airResistanceUnitComboBox.getItems().addAll("kg/m", "g/cm", "lb/ft");
-        airResistanceUnitComboBox.setValue("kg/m");
+        airResistanceUnitComboBox.getItems().addAll("N","kg/m", "g/cm", "lb/ft");
+        airResistanceUnitComboBox.setValue("N");
         add(airResistanceUnitComboBox, 2, 6);
 
         Button playButton = new Button("Play");
         Button stopButton = new Button("Stop");
         add(playButton, 0, 7);
         add(stopButton, 1, 7);
+    }
+
+    private TextField createNumericTextField() {
+        TextField textField = new TextField();
+        UnaryOperator<TextFormatter.Change> filter = change -> {
+            String newText = change.getControlNewText();
+            if (newText.matches("\\d*")) {
+                return change;
+            }
+            return null;
+        };
+        textField.setTextFormatter(new TextFormatter<>(filter));
+        return textField;
     }
 
     private String getBallColor(int ballNumber) {
@@ -89,6 +106,14 @@ public class ParameterMenu extends GridPane {
                 return "Green";
             default:
                 return "";
+        }
+    }
+
+    public void updateLabelColors(Color textColor) {
+        for (Node node : getChildren()) {
+            if (node instanceof Label) {
+                ((Label) node).setTextFill(textColor);
+            }
         }
     }
 }

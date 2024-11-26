@@ -2,14 +2,15 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
+
 package projectilesimulationfile;
 
 /**
  *
  * @author ilyas
  */
-
 import javafx.geometry.Insets;
+import javafx.scene.Node;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
@@ -23,19 +24,17 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
-import javafx.scene.text.Font;
 import javafx.scene.layout.Priority;
 
 public class SimulationController {
 
     private int numberOfProjectiles;
-
     private double[] x, y, vx, vy;
     private Color[] projectileColors = {Color.BLUE, Color.RED, Color.GREEN};
     private GraphicsContext gc;
     private Canvas canvas;
     private VBox controlPanel;
-    private Label dataLabel;
+    private DataBox dataBox;  // Add DataBox instance
 
     private ParameterMenu ball1Menu;
     private ParameterMenu ball2Menu;
@@ -43,9 +42,9 @@ public class SimulationController {
 
     public SimulationController(BorderPane mainPane) {
         createMenuBar(mainPane);
-        createDataLabel(mainPane);
         createCanvas(mainPane);
         createControlPanel(mainPane);
+        createDataBox(mainPane);  // Create and add DataBox
         setTheme(Color.BLACK, Color.WHITE); // Default to light theme
     }
 
@@ -85,8 +84,20 @@ public class SimulationController {
 
         gc.setFill(backgroundColor);
         gc.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
-       
-        dataLabel.setTextFill(Color.BLACK);
+
+        ball1Menu.updateLabelColors(textColor);
+        ball2Menu.updateLabelColors(textColor);
+        ball3Menu.updateLabelColors(textColor);
+        // gravity and number of projectiles
+        for (Node node : controlPanel.getChildren()) {
+            if (node instanceof HBox) {
+                for (Node hBoxNode : ((HBox) node).getChildren()) {
+                    if (hBoxNode instanceof Label) {
+                        ((Label) hBoxNode).setTextFill(textColor);
+                    }
+                }
+            }
+        }
     }
 
     private String toHex(Color color) {
@@ -125,6 +136,11 @@ public class SimulationController {
         HBox gravityBox = new HBox(5);
         Label gravityLabel = new Label("Gravity:");
         TextField gravityTextField = new TextField("");
+        gravityTextField.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (!newValue.matches("\\d*|\\d*\\.\\d*")) {
+                gravityTextField.setText(oldValue);
+            }
+        });
         ComboBox<String> gravityUnitComboBox = new ComboBox<>();
         gravityUnitComboBox.getItems().addAll("m/s²", "ft/s²", "g");
         gravityUnitComboBox.setValue("m/s²");
@@ -140,29 +156,25 @@ public class SimulationController {
         controlPanel.getChildren().addAll(ball1Menu, ball2Menu, ball3Menu);
         updateParameterMenus();
     }
-    
+
+    private void createDataBox(BorderPane mainPane) {
+        dataBox = new DataBox();  // Initialize DataBox
+        mainPane.setLeft(dataBox); // Set DataBox to the left side of the main pane
+    }
+
     private void updateParameterMenus() {
         ball2Menu.setVisible(numberOfProjectiles >= 2);
         ball3Menu.setVisible(numberOfProjectiles == 3);
     }
-    
+
     private void resetTrajectory() {
         gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
     }
-    
-    private void createDataLabel(BorderPane mainPane) {
-        HBox dataBox = new HBox();
-        dataBox.setPadding(new Insets(5));
-    
-        Label dataLabelTitle = new Label("Data: ");
-        dataLabelTitle.setFont(new Font("Arial", 16));
-        dataLabelTitle.setTextFill(Color.BLACK);
 
-        dataLabel = new Label("Data: ");
-        dataLabel.setFont(new Font("Arial", 16));
-        dataLabel.setTextFill(Color.BLACK);
-        dataBox.getChildren().addAll(dataLabelTitle, dataLabel);
-    
-        mainPane.setBottom(dataBox);
+    // Method to update the DataBox with trajectory data
+    public void updateTrajectoryData(double xVelocity, double yVelocity, double xAcceleration, 
+                                      double yAcceleration, double xPosition, double yPosition, double time) {
+        dataBox.updateDataLabels(xVelocity, yVelocity, xAcceleration, yAcceleration, xPosition, yPosition, time);
     }
+    
 }

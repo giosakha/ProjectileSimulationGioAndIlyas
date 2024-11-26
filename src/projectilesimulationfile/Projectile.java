@@ -8,16 +8,14 @@ package projectilesimulationfile;
  *
  * @author giorg
  */
-
-
 public class Projectile {
-    private double initialVelocity;    // m/s
-    private double launchAngle;        // degrees
-    private double mass;               // kg
-    private double initialHeight;      // meters
-    private double airResistance;      // drag coefficient
+    
+    private double initialVelocity;    
+    private double launchAngle;        
+    private double mass;               
+    private double initialHeight;      
+    private double airResistance;      
 
-    // Constructor to initialize the projectile with basic properties
     public Projectile(double initialVelocity, double launchAngle, double mass, double initialHeight, double airResistance) {
         this.initialVelocity = initialVelocity;
         this.launchAngle = launchAngle;
@@ -26,7 +24,6 @@ public class Projectile {
         this.airResistance = airResistance;
     }
 
-    // Getters and Setters
     public double getInitialVelocity() {
         return initialVelocity;
     }
@@ -66,7 +63,5 @@ public class Projectile {
     public void setAirResistance(double airResistance) {
         this.airResistance = airResistance;
     }
-
-   
 }
 
