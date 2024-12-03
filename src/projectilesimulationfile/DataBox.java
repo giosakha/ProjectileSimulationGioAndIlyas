@@ -13,6 +13,7 @@ import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.scene.input.MouseEvent;
 
 public class DataBox extends VBox {
     private Label titleLabel;
@@ -23,6 +24,7 @@ public class DataBox extends VBox {
     private Label xPositionLabel;
     private Label yPositionLabel;
     private Label timeLabel;
+    private Label angleLabel;
 
     public DataBox() {
         titleLabel = new Label("Data:");
@@ -33,13 +35,17 @@ public class DataBox extends VBox {
         xPositionLabel = new Label("x position: ");
         yPositionLabel = new Label("y position: ");
         timeLabel = new Label("time: ");
+        angleLabel = new Label("angle: "); // Initialize angle label
 
         getChildren().addAll(titleLabel, xVelocityLabel, yVelocityLabel, xAccelerationLabel, 
-                              yAccelerationLabel, xPositionLabel, yPositionLabel, timeLabel);
+                              yAccelerationLabel, xPositionLabel, yPositionLabel, timeLabel, angleLabel);
+        
+        setVisible(false);
     }
 
     public void updateDataLabels(double xVelocity, double yVelocity, double xAcceleration, 
-                                  double yAcceleration, double xPosition, double yPosition, double time) {
+                                  double yAcceleration, double xPosition, double yPosition, 
+                                  double time, double angle) { // Added angle parameter
         xVelocityLabel.setText("x velocity: " + xVelocity);
         yVelocityLabel.setText("y velocity: " + yVelocity);
         xAccelerationLabel.setText("x acceleration: " + xAcceleration);
@@ -47,6 +53,7 @@ public class DataBox extends VBox {
         xPositionLabel.setText("x position: " + xPosition);
         yPositionLabel.setText("y position: " + yPosition);
         timeLabel.setText("time: " + time);
+        angleLabel.setText("angle: " + angle);
     }
 
     public void updateColors(Color textColor) {
@@ -56,5 +63,15 @@ public class DataBox extends VBox {
                 ((Label) node).setTextFill(textColor);
             }
         }
+    }
+    
+    public void attachToProjectilePath(Node projectilePath) {
+        projectilePath.setOnMouseEntered(event -> {
+            setVisible(true);
+            setLayoutX(event.getSceneX() + 10);
+            setLayoutY(event.getSceneY() + 10);
+        });
+
+        projectilePath.setOnMouseExited(event -> setVisible(false));
     }
 }

@@ -5,18 +5,25 @@
 package projectilesimulationfile;
 
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
 
 /**
  * 
  * @author ilyas
  */
-
 public class Background {
-    private Color backgroundColor;
+    private Color backgroundColor = Color.WHITE;
+    private Image backgroundImage;
+    private String backgroundImagePath;
 
     public Background(Color backgroundColor) {
         this.backgroundColor = backgroundColor;
+    }
+
+    public Background(String backgroundImagePath) {
+        this.backgroundImagePath = backgroundImagePath;
+        this.backgroundImage = new Image("file:" + backgroundImagePath);
     }
 
     public Color getBackgroundColor() {
@@ -27,18 +34,46 @@ public class Background {
         this.backgroundColor = backgroundColor;
     }
 
-    public void drawBackground(GraphicsContext gc, double width, double height) {
-        gc.setFill(backgroundColor);
-        gc.fillRect(0, 0, width, height);
+    public void setBackgroundImage(String backgroundImagePath) {
+        this.backgroundImagePath = backgroundImagePath;
+        this.backgroundImage = new Image("file:" + backgroundImagePath);
     }
 
-    public void drawGrid(GraphicsContext gc, double width, double height, double spacing) {
-        gc.setStroke(Color.GRAY);
-        for (double x = 0; x <= width; x += spacing) {
-            gc.strokeLine(x, 0, x, height);
+    public void drawBackground(GraphicsContext gc, double width, double height) {
+        if (backgroundImage != null) {
+            gc.drawImage(backgroundImage, 0, 0, width, height);
+        } else {
+            gc.setFill(backgroundColor != null ? backgroundColor : Color.WHITE);
+            gc.fillRect(0, 0, width, height);
         }
-        for (double y = 0; y <= height; y += spacing) {
-            gc.strokeLine(0, y, width, y);
-        }
+    }
+
+    
+    public void setSkyBackground() {
+        setBackgroundImage("assets/sky.png");
+    }
+
+    public void setMountainBackground() {
+        setBackgroundImage("assets/mountain.png");
+    }
+
+    public void setCityBackground() {
+        setBackgroundImage("assets/city.png");
+    }
+
+    public void setOceanBackground() {
+        setBackgroundImage("assets/ocean.png");
+    }
+
+    public void setSpaceBackground() {
+        setBackgroundImage("assets/space.png");
+    }
+
+    public void setDesertBackground() {
+        setBackgroundImage("assets/desert.jpg");
+    }
+
+    public void setJungleBackground() {
+        setBackgroundImage("assets/jungle.jpg");
     }
 }
