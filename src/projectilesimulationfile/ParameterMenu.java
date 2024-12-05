@@ -38,36 +38,31 @@ public class ParameterMenu extends VBox {
     private ComboBox<String> weightUnitComboBox;
     private TextField airResistanceTextField;
     private ComboBox<String> airResistanceUnitComboBox;
-    
+
+    // Constructor
     public ParameterMenu(int ballNumber, Color ballColor, SimulationController controller) {
-        this.controller = controller; // Initialize the controller reference
+        this.controller = controller;
         setSpacing(10);
         setPadding(new Insets(10));
         setPrefWidth(400);
         setMaxHeight(Region.USE_PREF_SIZE);
 
-        // Title for the ball parameter menu
+        // UI Components Setup
         Label title = new Label("Ball " + ballNumber + " (" + getBallColor(ballNumber) + ")");
         title.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
 
-        // Separator for visual clarity
         Separator separator = new Separator();
-
-        // GridPane for ball-specific parameters
         ballParameterGrid = new GridPane();
         ballParameterGrid.setHgap(10);
         ballParameterGrid.setVgap(5);
 
-        // Add specific fields for ball parameters
         createBallParameterFields();
-
-        // Add listeners to validate inputs
         addValidationListeners();
-
-        // Add components to the layout
+        
         getChildren().addAll(title, separator, ballParameterGrid);
     }
 
+    // Validation Methods
     private void addValidationListeners() {
         initialVelocityTextField.textProperty().addListener((observable, oldValue, newValue) -> validateMenu());
         launchAngleTextField.textProperty().addListener((observable, oldValue, newValue) -> validateMenu());
@@ -78,15 +73,42 @@ public class ParameterMenu extends VBox {
     }
 
     private void validateMenu() {
-        // Validate launch angle
         validateLaunchAngle(launchAngleTextField, launchAngleUnitComboBox.getValue());
-
-        // Notify controller to re-validate simulate button
-        controller.validateInputs(); // Use the controller reference for validation
+        controller.validateInputs();
     }
 
-    public boolean isValid() {
-        // Check if all fields have valid values
+    // Helper Methods for UI Setup
+    private void createBallParameterFields() {
+        initialVelocityTextField = createNumericTextField();
+        initialVelocityUnitComboBox = createComboBox("m/s", "km/h", "ft/s");
+        addRowToGrid("Initial Velocity:", initialVelocityTextField, initialVelocityUnitComboBox, 0);
+
+        launchAngleTextField = createNumericTextField();
+        launchAngleUnitComboBox = createComboBox("degrees", "radians");
+        launchAngleUnitComboBox.setOnAction(e -> validateLaunchAngle(launchAngleTextField, launchAngleUnitComboBox.getValue()));
+        addRowToGrid("Launch Angle:", launchAngleTextField, launchAngleUnitComboBox, 1);
+
+        launchHeightTextField = createNumericTextField();
+        launchHeightUnitComboBox = createComboBox("m", "ft", "cm");
+        addRowToGrid("Launch Height:", launchHeightTextField, launchHeightUnitComboBox, 2);
+
+        weightTextField = createNumericTextField();
+        weightUnitComboBox = createComboBox("kg", "g", "lb");
+        addRowToGrid("Weight:", weightTextField, weightUnitComboBox, 3);
+
+        airResistanceTextField = createNumericTextField();
+        airResistanceUnitComboBox = createComboBox("N", "kg/m", "g/cm", "lb/ft");
+        addRowToGrid("Air Resistance:", airResistanceTextField, airResistanceUnitComboBox, 4);
+    }
+
+    private void addRowToGrid(String labelText, TextField textField, ComboBox<String> comboBox, int row) {
+        ballParameterGrid.add(new Label(labelText), 0, row);
+        ballParameterGrid.add(textField, 1, row);
+        ballParameterGrid.add(comboBox, 2, row);
+    }
+    
+    // Check if all fields are valid
+    public boolean areFieldsValid() {
         try {
             getInitialVelocity();
             getLaunchAngle();
@@ -99,62 +121,16 @@ public class ParameterMenu extends VBox {
         }
     }
     
-    private void createBallParameterFields() {
-        // Initial Velocity
-        initialVelocityTextField = createNumericTextField();
-        initialVelocityUnitComboBox = createComboBox("m/s", "km/h", "ft/s");
-        
-        addRowToGrid("Initial Velocity:", initialVelocityTextField, initialVelocityUnitComboBox, 0);
-        
-        // Launch Angle
-        launchAngleTextField = createValidatedNumericTextField("degrees"); // Default unit is degrees
-        launchAngleUnitComboBox = createComboBox("degrees", "radians");
-        launchAngleUnitComboBox.setOnAction(e -> {
-            String selectedUnit = launchAngleUnitComboBox.getValue();
-            validateLaunchAngle(launchAngleTextField, selectedUnit); // Apply validation
-        });
-        
-        addRowToGrid("Launch Angle:", launchAngleTextField, launchAngleUnitComboBox, 1);
-        // Launch Height
-        launchHeightTextField = createNumericTextField();
-        launchHeightUnitComboBox = createComboBox("m", "ft", "cm");
-        
-        addRowToGrid("Launch Height:", launchHeightTextField, launchHeightUnitComboBox, 2);
-        
-        // Weight
-        weightTextField = createNumericTextField();
-        weightUnitComboBox = createComboBox("kg", "g", "lb");
-        
-        addRowToGrid("Weight:", weightTextField, weightUnitComboBox, 3);
-        
-        // Air Resistance
-        airResistanceTextField = createNumericTextField();
-        airResistanceUnitComboBox = createComboBox("N", "kg/m", "g/cm", "lb/ft");
-        
-        addRowToGrid("Air Resistance:", airResistanceTextField, airResistanceUnitComboBox, 4);
-    }
-    
-    private void addRowToGrid(String labelText, TextField textField, ComboBox<String> comboBox, int row) {
-        ballParameterGrid.add(new Label(labelText), 0, row);
-        ballParameterGrid.add(textField, 1, row);
-        ballParameterGrid.add(comboBox, 2, row);
-    }
-    
     private TextField createNumericTextField() {
         TextField textField = new TextField();
+
+        // TextFormatter to restrict input to numeric values
         UnaryOperator<TextFormatter.Change> filter = change -> {
             String newText = change.getControlNewText();
-            return newText.matches("\\d*\\.?\\d*") ? change : null; // Allow only numbers and a decimal point
+            return newText.matches("[0-9]*\\.?[0-9]*") ? change : null; // Only digits and one decimal point allowed
         };
         textField.setTextFormatter(new TextFormatter<>(filter));
-        return textField;
-    }
-    
-    private TextField createValidatedNumericTextField(String unit) {
-        TextField textField = new TextField();
-        textField.textProperty().addListener((observable, oldValue, newValue) -> {
-            validateLaunchAngle(textField, unit);
-        });
+
         return textField;
     }
     
@@ -213,14 +189,6 @@ public class ParameterMenu extends VBox {
         }
     }
     
-    // Helper method to convert Color to Hex
-    private String toHex(Color color) {
-        return String.format("#%02X%02X%02X",
-                (int) (color.getRed() * 255),
-                (int) (color.getGreen() * 255),
-                (int) (color.getBlue() * 255));
-    }
-    
     public void resetFields() {
         initialVelocityTextField.clear();
         launchAngleTextField.clear();
@@ -233,6 +201,8 @@ public class ParameterMenu extends VBox {
         launchHeightUnitComboBox.setValue("m");
         weightUnitComboBox.setValue("kg");
         airResistanceUnitComboBox.setValue("N");
+        
+        launchAngleTextField.setStyle("");
     }
     
     public double getInitialVelocity() {

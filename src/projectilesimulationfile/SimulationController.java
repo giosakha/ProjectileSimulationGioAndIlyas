@@ -9,8 +9,13 @@ package projectilesimulationfile;
  *
  * @author ilyas
  */
+import java.io.File;
+import java.util.Stack;
 import java.util.function.UnaryOperator;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.geometry.Insets;
+import javafx.geometry.Point2D;
 import javafx.scene.Node;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -26,12 +31,19 @@ import javafx.scene.control.TextFormatter;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.LineTo;
+import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
+import javafx.scene.shape.PathElement;
+import javafx.stage.FileChooser;
+import javafx.util.Duration;
 
 public class SimulationController {
 
+    private BorderPane mainPane;
     private ParameterMenu[] parameterMenus;
     private Background background;
     private int numberOfProjectiles;
@@ -47,8 +59,12 @@ public class SimulationController {
     private ComboBox<Integer> numberOfProjectilesComboBox;
     private Button simulateButton;
     private Button resetButton;
+    
+    private Stack<Runnable> undoStack = new Stack<>();
+    private Stack<Runnable> redoStack = new Stack<>();
 
     public SimulationController(BorderPane mainPane) {
+        this.mainPane = mainPane;
         this.numberOfProjectiles = 1;
         this.parameterMenus = new ParameterMenu[3];
         createMenuBar(mainPane);
@@ -128,7 +144,6 @@ public class SimulationController {
         sharedControls.getChildren().addAll(gravityBox, projectilesBox);
         controlPanel.getChildren().add(sharedControls);
     }
-
     private TextField createNumericTextField() {
         TextField textField = new TextField();
         UnaryOperator<TextFormatter.Change> filter = change -> {
@@ -139,25 +154,42 @@ public class SimulationController {
         return textField;
     }
 
-    public void validateInputs() {
-        // Disable simulate button if any required input is invalid
+     public void validateInputs() {
         boolean isValid = true;
 
-        // Check gravity field
+        // Validate gravity input
         if (gravityTextField.getText().isEmpty() || !isValidDouble(gravityTextField.getText())) {
             isValid = false;
         }
 
-        // Check parameter menus
+        // Validate all parameter menus
         for (int i = 0; i < numberOfProjectiles; i++) {
             ParameterMenu menu = parameterMenus[i];
-            if (!menu.isValid()) {
+            if (!menu.areFieldsValid()) {
+                isValid = false;
+                break;
+            }
+
+            double angle = menu.getLaunchAngle();
+            String unit = menu.getLaunchAngleUnit();
+
+            if ((unit.equals("degrees") && (angle > 90 || angle < 0)) ||
+                (unit.equals("radians") && (angle > Math.PI / 2 || angle < 0))) {
+                isValid = false;
+                break;
+            }
+
+            // Validate velocity and air resistance ranges
+            double velocity = menu.getInitialVelocity();
+            double airResistance = menu.getAirResistance();
+
+            if (velocity < 0.1 || velocity > 1000 || airResistance < 0 || airResistance > 1000) {
                 isValid = false;
                 break;
             }
         }
 
-        simulateButton.setDisable(!isValid); // Enable or disable simulate button based on validity
+        simulateButton.setDisable(!isValid); // Disable simulate button if inputs are invalid
     }
 
     private boolean isValidDouble(String text) {
@@ -169,8 +201,6 @@ public class SimulationController {
         }
     }
 
-
-
     private void updateParameterMenus() {
         // Update visibility of parameter menus based on the selected number of projectiles
         for (int i = 0; i < parameterMenus.length; i++) {
@@ -179,12 +209,11 @@ public class SimulationController {
     }
     
     private void updateBackground(Runnable backgroundSetter) {
-        backgroundSetter.run();
-        gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
-        background.drawBackground(gc, canvas.getWidth(), canvas.getHeight());
+        System.out.println("Updating background..."); // Debug message
+        backgroundSetter.run(); // Set the background
+        gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight()); // Clear the canvas
+        background.drawFixedBackground(gc, canvas.getWidth(), canvas.getHeight()); // Redraw the background
     }
-
-
 
     private void createMenuBar(BorderPane mainPane) {
         MenuBar menuBar = new MenuBar();
@@ -197,11 +226,16 @@ public class SimulationController {
         MenuItem newFile = new MenuItem("New");
         MenuItem openFile = new MenuItem("Open");
         MenuItem saveFile = new MenuItem("Save");
+        newFile.setOnAction(e -> resetSimulation());
+        openFile.setOnAction(e -> openSimulation());
+        saveFile.setOnAction(e -> saveSimulation());
         fileMenu.getItems().addAll(newFile, openFile, saveFile);
 
         // Edit menu items
         MenuItem undo = new MenuItem("Undo");
         MenuItem redo = new MenuItem("Redo");
+        undo.setOnAction(e -> undoAction());
+        redo.setOnAction(e -> redoAction());
         editMenu.getItems().addAll(undo, redo);
 
         // Theme menu items
@@ -238,6 +272,43 @@ public class SimulationController {
         mainPane.setTop(menuBar);
     }
 
+    private void saveSimulation() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Save Simulation");
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Simulation Files", "*.sim"));
+        File file = fileChooser.showSaveDialog(null);
+        if (file != null) {
+            // Write simulation state to file
+        }
+    }
+
+    private void openSimulation() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Open Simulation");
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Simulation Files", "*.sim"));
+        File file = fileChooser.showOpenDialog(null);
+        if (file != null) {
+            // Load simulation state from file
+        }
+    }
+
+    private void undoAction() {
+        if (!undoStack.isEmpty()) {
+            Runnable lastAction = undoStack.pop();
+            lastAction.run(); // Perform the undo action
+            redoStack.push(lastAction);
+            redrawCanvas();
+        }
+    }
+
+    private void redoAction() {
+        if (!redoStack.isEmpty()) {
+            Runnable redoAction = redoStack.pop();
+            redoAction.run(); // Perform the redo action
+            undoStack.push(redoAction);
+            redrawCanvas();
+        }
+    }
     
     private void setTheme(Color textColor, Color backgroundColor) {
         controlPanel.setStyle("-fx-background-color: " + toHex(backgroundColor) + ";");
@@ -267,7 +338,7 @@ public class SimulationController {
         }
 
         // Redraw the background to ensure it reflects the new theme
-        background.drawBackground(gc, canvas.getWidth(), canvas.getHeight());
+        background.drawFixedBackground(gc, canvas.getWidth(), canvas.getHeight());
     }           
 
 
@@ -279,37 +350,127 @@ public class SimulationController {
     }
 
     private void createCanvas(BorderPane mainPane) {
-        canvas = new Canvas();
-        gc = canvas.getGraphicsContext2D();
-        VBox.setVgrow(canvas, Priority.ALWAYS);
-        mainPane.setCenter(canvas);
-        background = new Background(Color.WHITE);
-        background.setSkyBackground();
-        background.drawBackground(gc, canvas.getWidth(), canvas.getHeight());
-    }
-    
-    public void simulateAllProjectiles() {
-        gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
-        background.drawBackground(gc, canvas.getWidth(), canvas.getHeight());
+        // Create a static background canvas
+        Canvas backgroundCanvas = new Canvas(800, 600);
+        GraphicsContext backgroundGc = backgroundCanvas.getGraphicsContext2D();
 
+        // Draw the fixed background once
+        background = new Background(Color.LIGHTBLUE); // Example color
+        background.setSkyBackground(); // Example image
+        background.drawFixedBackground(backgroundGc, 800, 600);
+
+        // Create a dynamic canvas for trajectories
+        canvas = new Canvas(800, 600);
+        gc = canvas.getGraphicsContext2D();
+
+        // Overlay the canvases
+        StackPane stackPane = new StackPane(backgroundCanvas, canvas);
+        mainPane.setCenter(stackPane);
+
+        // Add listeners for canvas resizing
+        canvas.widthProperty().addListener((observable, oldWidth, newWidth) -> redrawCanvas());
+        canvas.heightProperty().addListener((observable, oldHeight, newHeight) -> redrawCanvas());
+    }
+
+    private void redrawCanvas() {
+        gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
         for (int i = 0; i < numberOfProjectiles; i++) {
             ParameterMenu menu = parameterMenus[i];
             double initialVelocity = convertVelocityToSI(menu.getInitialVelocity(), menu.getInitialVelocityUnit());
-            double launchAngle = validateLaunchAngle(menu.getLaunchAngle(), menu.getLaunchAngleUnit());
+            double launchAngle = convertAngleToRadians(menu.getLaunchAngle(), menu.getLaunchAngleUnit());
             double launchHeight = convertHeightToMeters(menu.getLaunchHeight(), menu.getLaunchHeightUnit());
             double weight = convertWeightToSI(menu.getWeight(), menu.getWeightUnit());
             double airResistance = convertAirResistanceToSI(menu.getAirResistance(), menu.getAirResistanceUnit());
             double gravity = convertGravityToSI(Double.parseDouble(gravityTextField.getText()), gravityUnitComboBox.getValue());
 
-            Path trajectory = TrajectoryPathPlotter.pathTrajectory(initialVelocity, launchAngle, launchHeight, weight, airResistance, gravity);
-            drawTrajectory(trajectory, i);
+            drawTrajectoryPath(initialVelocity, launchAngle, launchHeight, weight, airResistance, gravity, i);
         }
     }
 
 
-    
+    private void adjustCanvasSize(double maxX, double maxY) {
+        double margin = 50; // Add a margin for better visibility
+        canvas.setWidth(maxX + margin);
+        canvas.setHeight(maxY + margin);
+        redrawCanvas(); // Ensure trajectories are redrawn
+    }
+
+    private void simulateAllProjectiles() {
+        gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
+
+        double maxX = 0, maxY = 0;
+
+        for (int i = 0; i < numberOfProjectiles; i++) {
+            ParameterMenu menu = parameterMenus[i];
+            double initialVelocity = convertVelocityToSI(menu.getInitialVelocity(), menu.getInitialVelocityUnit());
+            double launchAngle = convertAngleToRadians(menu.getLaunchAngle(), menu.getLaunchAngleUnit());
+            double launchHeight = convertHeightToMeters(menu.getLaunchHeight(), menu.getLaunchHeightUnit());
+            double weight = convertWeightToSI(menu.getWeight(), menu.getWeightUnit());
+            double airResistance = convertAirResistanceToSI(menu.getAirResistance(), menu.getAirResistanceUnit());
+            double gravity = convertGravityToSI(Double.parseDouble(gravityTextField.getText()), gravityUnitComboBox.getValue());
+
+            Point2D maxPoint = TrajectoryPathPlotter.findMaxExtents(
+                initialVelocity, launchAngle, launchHeight, weight, airResistance, gravity
+            );
+            maxX = Math.max(maxX, maxPoint.getX());
+            maxY = Math.max(maxY, maxPoint.getY() + launchHeight);
+
+            drawTrajectoryPath(initialVelocity, launchAngle, launchHeight, weight, airResistance, gravity, i);
+            animateTrajectory(initialVelocity, launchAngle, launchHeight, weight, airResistance, gravity, i);
+        }
+
+        adjustCanvasSize(maxX, maxY);
+    }
+
+
+    private void drawTrajectoryPath(double initialVelocity, double launchAngle, double launchHeight,
+                                double weight, double airResistance, double gravity, int projectileIndex) {
+        Path trajectory = TrajectoryPathPlotter.pathTrajectory(
+            initialVelocity, launchAngle, launchHeight, weight, airResistance, gravity
+        );
+        trajectory.setStroke(projectileColors[projectileIndex]);
+        trajectory.setStrokeWidth(2);
+
+        // Draw trajectory directly on the canvas
+        gc.setStroke(projectileColors[projectileIndex]);
+        gc.setLineWidth(2);
+
+        Point2D prevPoint = null;
+        for (PathElement element : trajectory.getElements()) {
+            if (element instanceof MoveTo moveTo) {
+                prevPoint = new Point2D(moveTo.getX(), canvas.getHeight() - moveTo.getY());
+            } else if (element instanceof LineTo lineTo) {
+                if (prevPoint != null) {
+                    gc.strokeLine(prevPoint.getX(), canvas.getHeight() - prevPoint.getY(),
+                                  lineTo.getX(), canvas.getHeight() - lineTo.getY());
+                }
+                prevPoint = new Point2D(lineTo.getX(), lineTo.getY());
+            }
+        }
+    }
+
+
+    private void animateTrajectory(double initialVelocity, double launchAngle, double launchHeight,
+                               double weight, double airResistance, double gravity, int projectileIndex) {
+        Timeline timeline = new Timeline();
+        timeline.setCycleCount(Timeline.INDEFINITE);
+        double[] time = {0.0};
+
+        timeline.getKeyFrames().add(new KeyFrame(Duration.seconds(0.05), event -> {
+            Point2D position = PhysicsEngine.calculatePosition(time[0], initialVelocity, launchAngle, launchHeight, weight, airResistance);
+            if (position.getY() <= 0) {
+                timeline.stop();
+            } else {
+                gc.setFill(projectileColors[projectileIndex]);
+                gc.fillOval(position.getX(), canvas.getHeight() - position.getY(), 4, 4);
+            }
+            time[0] += 0.05;
+        }));
+
+        timeline.play();
+    }
+
     public void resetSimulation() {
-        // Reset all settings to default
         numberOfProjectilesComboBox.setValue(1);
         gravityTextField.clear();
         gravityUnitComboBox.setValue("m/s²");
@@ -319,23 +480,10 @@ public class SimulationController {
             menu.setVisible(false);
         }
 
-        parameterMenus[0].setVisible(true); // Ensure the first menu is visible by default
-        gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
-    }
+        parameterMenus[0].setVisible(true); // Ensure the first menu is visible
 
-    private void drawTrajectory(Path trajectory, int projectileIndex) {
-        trajectory.setStroke(projectileColors[projectileIndex]);
-        trajectory.setStrokeWidth(2);
-        controlPanel.getChildren().add(trajectory);
-    }
-    
-    private double validateLaunchAngle(double angle, String unit) {
-        if (unit.equals("degrees")) {
-            return Math.min(90, Math.max(0, angle)); // Clamp between 0 and 90
-        } else if (unit.equals("radians")) {
-            return Math.min(Math.PI / 2, Math.max(0, angle)); // Clamp between 0 and π/2
-        }
-        return angle;
+        gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
+        background.drawFixedBackground(gc, canvas.getWidth(), canvas.getHeight()); // Retain the current background
     }
     
     private double convertVelocityToSI(double velocity, String unit) {
@@ -399,3 +547,4 @@ public class SimulationController {
         }
     }
 }
+
